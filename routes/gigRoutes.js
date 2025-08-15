@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const verifyToken = require("../middleware/verifyToken");
+const { verifyToken } = require("../middleware/verifyToken");
 const upload = require("../middleware/upload");
 
 const {
@@ -17,11 +17,13 @@ const {
 // ✅ File Upload
 router.post("/", verifyToken, upload.single("image"), createGig);
 
-// ✅ Gig CRUD
+// ✅ Specific routes MUST come before parameterized routes
 router.get("/mine", verifyToken, getMyGigs);
-router.delete("/:id", verifyToken, deleteGig);
-router.put("/:id", verifyToken, updateGig);
 router.get("/", getAllGigs);
+
+// ✅ Gig CRUD with ID parameters
+router.delete("/:id", verifyToken, deleteGig);
+router.put("/:id", verifyToken, upload.single("image"), updateGig);
 router.get("/:id", getGigById);
 
 // ✅ Reviews

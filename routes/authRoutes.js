@@ -3,6 +3,7 @@ const passport = require("passport");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { verifyToken } = require("../middleware/verifyToken");
 
 const router = express.Router();
 
@@ -146,6 +147,28 @@ router.get("/current-user", (req, res) => {
     res.json(req.user);
   } else {
     res.status(401).json({ message: "Not authenticated" });
+  }
+});
+
+// ✅ Get current authenticated user (JWT)
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.json({
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      profilePicture: user.profilePicture,
+      isOAuth: user.isOAuth
+    });
+  } catch (error) {
+    console.error("Get user error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

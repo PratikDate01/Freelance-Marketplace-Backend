@@ -7,7 +7,8 @@ const gigSchema = new mongoose.Schema(
     category: { type: String },
     price: { type: Number, required: true },
     deliveryTime: { type: Number, required: true },
-    images: [String],
+    image: { type: String }, // Single main image
+    images: [String], // Additional images array
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

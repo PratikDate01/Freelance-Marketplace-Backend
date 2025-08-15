@@ -15,6 +15,9 @@ async function createGig(req, res) {
     let imageUrl = "";
     if (req.file && req.file.path) {
       imageUrl = req.file.path; // Cloudinary or Multer image path
+      console.log("✅ Image uploaded successfully:", imageUrl);
+    } else {
+      console.log("❌ No image file received in request");
     }
 
     const newGig = new Gig({
@@ -28,6 +31,12 @@ async function createGig(req, res) {
     });
 
     await newGig.save();
+    console.log("✅ Gig saved to database:", {
+      id: newGig._id,
+      title: newGig.title,
+      image: newGig.image,
+      hasImage: !!newGig.image
+    });
     res.status(201).json({ message: "Gig created successfully", gig: newGig });
   } catch (error) {
     console.error("Gig creation failed:", error);
@@ -80,14 +89,30 @@ const updateGig = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
+    // Prepare update data
+    const updateData = { ...req.body };
+    
+    // Handle image upload if new image is provided
+    if (req.file && req.file.path) {
+      updateData.image = req.file.path;
+      console.log("✅ New image uploaded for gig update:", updateData.image);
+    }
+
     const updated = await Gig.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true }
     );
 
+    console.log("✅ Gig updated successfully:", {
+      id: updated._id,
+      title: updated.title,
+      image: updated.image
+    });
+
     res.status(200).json(updated);
   } catch (err) {
+    console.error("Update gig error:", err);
     res.status(500).json({ message: "Failed to update gig", error: err.message });
   }
 };
@@ -96,6 +121,14 @@ const updateGig = async (req, res) => {
 const getAllGigs = async (req, res) => {
   try {
     const gigs = await Gig.find().populate("sellerId", "name email avatar");
+    console.log("📋 Fetching gigs - sample gig images:", gigs.slice(0, 3).map(g => ({
+      id: g._id,
+      title: g.title,
+      image: g.image,
+      images: g.images,
+      hasImage: !!g.image,
+      hasImages: !!(g.images && g.images.length > 0)
+    })));
     res.status(200).json(gigs);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch gigs" });
@@ -105,7 +138,14 @@ const getAllGigs = async (req, res) => {
 // ✅ Get single gig with full Fiverr-style seller info
 const getGigById = async (req, res) => {
   try {
-    const gig = await Gig.findById(req.params.id)
+    const { id } = req.params;
+    
+    // Validate ObjectId format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid gig ID format" });
+    }
+    
+    const gig = await Gig.findById(id)
       .populate("sellerId", "name email avatar bio location memberSince avgResponseTime")
       .populate("reviews.userId", "name");
     
