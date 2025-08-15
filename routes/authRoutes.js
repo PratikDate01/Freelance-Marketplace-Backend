@@ -7,7 +7,7 @@ const { verifyToken } = require("../middleware/verifyToken");
 
 const router = express.Router();
 
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
+const CLIENT_URL = process.env.FRONTEND_URL || process.env.CLIENT_URL || "http://localhost:3000";
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 
 // 🔐 Generate JWT Token
