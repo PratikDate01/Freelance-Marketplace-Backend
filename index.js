@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const session = require('express-session');
 const passport = require('passport');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
@@ -40,18 +39,8 @@ if (isDev) {
   }));
 }
 
-// Session & Passport (for Google OAuth)
-app.use(session({
-  secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'session_secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // Render uses HTTP between proxy and app
-    sameSite: 'lax'
-  }
-}));
+// Passport (JWT-based OAuth flow - no server sessions)
 app.use(passport.initialize());
-app.use(passport.session());
 
 // Body parsing
 app.use(express.json({ limit: '2mb' }));

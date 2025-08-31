@@ -86,78 +86,33 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Google OAuth Start
+// ✅ Google OAuth Start (stateless)
 router.get("/google", passport.authenticate("google", {
   scope: ["profile", "email"],
+  session: false,
 }));
 
-// ✅ Google OAuth Callback
+// ✅ Google OAuth Callback (issue JWT and redirect)
 router.get(
   "/google/callback",
   passport.authenticate("google", {
     failureRedirect: `${CLIENT_URL}/signin`,
-    session: true,
+    session: false,
   }),
   (req, res) => {
     try {
-      // Issue JWT directly on callback and pass to frontend via query param
       const token = generateToken(req.user);
       const redirectUrl = `${CLIENT_URL}/oauth-redirect?token=${encodeURIComponent(token)}`;
       return res.redirect(redirectUrl);
     } catch (err) {
-      console.error("OAuth callback error:", err);
+      console.error("OAuth callback error", err);
       return res.redirect(`${CLIENT_URL}/signin`);
     }
   }
 );
 
-// ✅ Get OAuth Authenticated User and Issue JWT
-router.get("/success", async (req, res) => {
-  if (!req.user) {
-    return res.status(401).json({ success: false, message: "Not authenticated" });
-  }
-
-  try {
-    let user = await User.findOne({ email: req.user.email });
-
-    // If user doesn't exist, create them
-    if (!user) {
-      user = await User.create({
-        email: req.user.email,
-        name: req.user.displayName || req.user.name || "Google User",
-        isOAuth: true,
-        role: "client", // Default role
-      });
-    }
-
-    const token = generateToken(user);
-
-    res.status(200).json({
-      success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role || "client",
-      },
-      token,
-    });
-  } catch (err) {
-    console.error("OAuth success error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ✅ Get current user (session check)
-router.get("/current-user", (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json(req.user);
-  } else {
-    res.status(401).json({ message: "Not authenticated" });
-  }
-});
-
-// ✅ Get current authenticated user (JWT)
+// ❌ Remove session-dependent endpoints in JWT-only setup
+// Kept /me which uses JWT
 router.get("/me", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
@@ -177,14 +132,6 @@ router.get("/me", verifyToken, async (req, res) => {
     console.error("Get user error:", error);
     res.status(500).json({ message: "Server error" });
   }
-});
-
-// ✅ Logout (destroy session)
-router.get("/logout", (req, res) => {
-  req.logout((err) => {
-    if (err) return res.status(500).json({ error: err });
-    res.redirect(CLIENT_URL);
-  });
 });
 
 module.exports = router;
