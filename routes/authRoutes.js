@@ -102,7 +102,12 @@ router.get(
   (req, res) => {
     try {
       const token = generateToken(req.user);
-      const redirectUrl = `${CLIENT_URL}/oauth-redirect?token=${encodeURIComponent(token)}`;
+      // Decide frontend base by env to avoid wrong redirects
+      const frontendUrl = process.env.NODE_ENV === "production"
+        ? (process.env.FRONTEND_URL || process.env.CLIENT_URL || "https://freelance-marketplace-frontend-v2sy.vercel.app")
+        : "http://localhost:3000";
+      // Redirect to both supported paths: primary /oauth/redirect; keep token param for existing handler
+      const redirectUrl = `${frontendUrl}/oauth/redirect?token=${encodeURIComponent(token)}`;
       return res.redirect(redirectUrl);
     } catch (err) {
       console.error("OAuth callback error", err);
