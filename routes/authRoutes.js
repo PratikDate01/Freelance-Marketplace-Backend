@@ -96,7 +96,7 @@ router.get("/google", passport.authenticate("google", {
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${CLIENT_URL}/signin`,
+    failureRedirect: `${CLIENT_URL}`,
     session: false,
   }),
   (req, res) => {
@@ -106,7 +106,7 @@ router.get(
       return res.redirect(redirectUrl);
     } catch (err) {
       console.error("OAuth callback error", err);
-      return res.redirect(`${CLIENT_URL}/signin`);
+      return res.redirect(`${CLIENT_URL}`);
     }
   }
 );

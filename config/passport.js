@@ -8,10 +8,10 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      // Prefer explicit BASE_URL in production; fall back to relative path for dev
-      callbackURL: process.env.BASE_URL
-        ? `${process.env.BASE_URL}/api/auth/google/callback`
-        : "/api/auth/google/callback",
+      // Build absolute callback URL. Use BASE_URL or RENDER_EXTERNAL_URL in prod; fallback to localhost for dev
+      callbackURL:
+        (process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 5000}`) +
+        "/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       const email = profile.emails[0].value;
