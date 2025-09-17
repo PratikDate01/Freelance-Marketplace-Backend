@@ -71,6 +71,7 @@ app.use(errorHandler);
 
 // Socket.IO setup
 const io = new Server(server, {
+  path: '/ws',
   cors: {
     origin: allowedOrigins,
     credentials: true,
