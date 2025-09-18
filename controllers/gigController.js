@@ -117,20 +117,38 @@ const updateGig = async (req, res) => {
   }
 };
 
-// ✅ Get all gigs (for client browsing)
+// ✅ Get all gigs (for client browsing) with pagination
 const getAllGigs = async (req, res) => {
   try {
-    const gigs = await Gig.find().populate("sellerId", "name email avatar");
-    console.log("📋 Fetching gigs - sample gig images:", gigs.slice(0, 3).map(g => ({
-      id: g._id,
-      title: g.title,
-      image: g.image,
-      images: g.images,
-      hasImage: !!g.image,
-      hasImages: !!(g.images && g.images.length > 0)
-    })));
-    res.status(200).json(gigs);
+    const { page = 1, limit = 20, category, search } = req.query;
+    const query = {};
+
+    if (category) query.category = category;
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const gigs = await Gig.find(query)
+      .populate("sellerId", "name email avatar")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Gig.countDocuments(query);
+
+    console.log(`📋 Fetching gigs - page ${page}, limit ${limit}, total ${total}`);
+
+    res.status(200).json({
+      gigs,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
   } catch (error) {
+    console.error("Error fetching gigs:", error);
     res.status(500).json({ message: "Failed to fetch gigs" });
   }
 };
@@ -166,19 +184,41 @@ const addReviewToGig = async (req, res) => {
     console.log("Review request by user:", req.user); // ✅ Check user is defined
 
     const { comment, rating } = req.body;
+    const gigId = req.params.id;
+    const userId = req.user.id;
+    const userName = req.user.name;
 
-    const review = new Review({
-      gigId: req.params.id,
-      user: {
-        _id: req.user.id,
-        name: req.user.name,
-      },
+    // Find the gig
+    const gig = await Gig.findById(gigId);
+    if (!gig) {
+      return res.status(404).json({ message: "Gig not found" });
+    }
+
+    // Check if user already reviewed this gig
+    const existingReview = gig.reviews.find(review => review.userId.toString() === userId);
+    if (existingReview) {
+      return res.status(400).json({ message: "You have already reviewed this gig" });
+    }
+
+    // Add review to gig
+    const newReview = {
+      userId,
+      name: userName,
+      rating: Number(rating),
       comment,
-      rating,
-    });
+      createdAt: new Date()
+    };
 
-    await review.save();
-    res.status(201).json({ message: "Review added" });
+    gig.reviews.push(newReview);
+
+    // Update average rating and total reviews
+    const totalRating = gig.reviews.reduce((sum, review) => sum + review.rating, 0);
+    gig.averageRating = totalRating / gig.reviews.length;
+    gig.totalReviews = gig.reviews.length;
+
+    await gig.save();
+
+    res.status(201).json({ message: "Review added successfully" });
   } catch (err) {
     console.error("Review submission failed:", err);
     res.status(500).json({ message: "Internal Server Error" });
@@ -189,7 +229,11 @@ const addReviewToGig = async (req, res) => {
 const getGigReviews = async (req, res) => {
   try {
     const gigId = req.params.id;
-    const reviews = await Review.find({ gigId }).sort({ createdAt: -1 });
+    const gig = await Gig.findById(gigId).populate("reviews.userId", "name");
+    if (!gig) {
+      return res.status(404).json({ message: "Gig not found" });
+    }
+    const reviews = gig.reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json(reviews);
   } catch (err) {
     console.error("Error fetching reviews:", err);

@@ -197,7 +197,12 @@ const getSellerOrders = async (req, res) => {
 
     const total = await Order.countDocuments(query);
 
-    res.json(orders);
+    res.json({
+      orders,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
 
   } catch (error) {
     console.error("Error fetching seller orders:", error);

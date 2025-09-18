@@ -120,6 +120,28 @@ io.on('connection', (socket) => {
     socket.leave(`conversation_${conversationId}`);
   });
 
+  socket.on('send_message', (data) => {
+    // Handle sending message - this should be done via API, but for real-time, we can emit
+    // Actually, messages are sent via API, this is just for real-time delivery
+  });
+
+  socket.on('typing_start', (data) => {
+    const { conversationId, userId, userName } = data;
+    socket.to(`conversation_${conversationId}`).emit('user_typing', {
+      userId,
+      userName,
+      conversationId
+    });
+  });
+
+  socket.on('typing_stop', (data) => {
+    const { conversationId, userId } = data;
+    socket.to(`conversation_${conversationId}`).emit('user_stopped_typing', {
+      userId,
+      conversationId
+    });
+  });
+
   socket.on('disconnect', () => {
     // cleanup handled by socket.io
   });
