@@ -653,6 +653,8 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+const SavedGig = require("../models/SavedGig");
+
 // Get buyer statistics
 const getBuyerStats = async (req, res) => {
   try {
@@ -660,6 +662,9 @@ const getBuyerStats = async (req, res) => {
 
     // Get all orders for the buyer
     const orders = await Order.find({ buyerId });
+
+    // Get saved gigs count
+    const savedGigsCount = await SavedGig.countDocuments({ userId: buyerId });
 
     // Calculate statistics
     const stats = {
@@ -669,7 +674,7 @@ const getBuyerStats = async (req, res) => {
       cancelledOrders: orders.filter(order => order.status === 'cancelled').length,
       totalSpent: orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
       reviewsGiven: 0, // TODO: Implement reviews count
-      savedGigs: 0 // TODO: Implement saved gigs count
+      savedGigs: savedGigsCount
     };
 
     // Get recent activity (last 10 orders)
