@@ -17,9 +17,22 @@ const {
 // ✅ File Upload
 router.post("/", verifyToken, upload.single("image"), createGig);
 
+const {
+  saveGig,
+  unsaveGig,
+  getSavedGigs,
+  isGigSaved
+} = require("../controllers/savedGigController");
+
 // ✅ Specific routes MUST come before parameterized routes
 router.get("/mine", verifyToken, getMyGigs);
 router.get("/", getAllGigs);
+
+// ✅ Saved gigs routes
+router.post("/:id/save", verifyToken, saveGig);
+router.delete("/:id/save", verifyToken, unsaveGig);
+router.get("/saved", verifyToken, getSavedGigs);
+router.get("/:id/saved", verifyToken, isGigSaved);
 
 // ✅ Gig CRUD with ID parameters
 router.delete("/:id", verifyToken, deleteGig);
