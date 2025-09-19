@@ -688,6 +688,180 @@ const getPaymentNotifications = async (req, res) => {
   }
 };
 
+const PaymentMethod = require('../models/PaymentMethod');
+
+// Get payment methods for user
+const getPaymentMethods = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const paymentMethods = await PaymentMethod.find({
+      userId: userId,
+      status: 'active'
+    }).sort({ isPrimary: -1, createdAt: -1 });
+
+    res.json(paymentMethods);
+  } catch (error) {
+    console.error('Error fetching payment methods:', error);
+    res.status(500).json({
+      message: 'Failed to fetch payment methods',
+      error: error.message
+    });
+  }
+};
+
+// Add payment method for user
+const addPaymentMethod = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type, accountName, accountNumber, routingNumber, bankName, email } = req.body;
+
+    // Check if this is the first payment method for the user
+    const existingMethods = await PaymentMethod.countDocuments({ userId: userId });
+    const isPrimary = existingMethods === 0;
+
+    const paymentMethod = new PaymentMethod({
+      userId,
+      type,
+      accountName,
+      accountNumber,
+      routingNumber,
+      bankName,
+      email,
+      isPrimary
+    });
+
+    await paymentMethod.save();
+
+    res.status(201).json({
+      message: 'Payment method added successfully',
+      paymentMethod
+    });
+  } catch (error) {
+    console.error('Error adding payment method:', error);
+    res.status(500).json({
+      message: 'Failed to add payment method',
+      error: error.message
+    });
+  }
+};
+
+// Update payment method
+const updatePaymentMethod = async (req, res) => {
+  try {
+    const { methodId } = req.params;
+    const userId = req.user.id;
+    const updates = req.body;
+
+    const paymentMethod = await PaymentMethod.findOne({
+      _id: methodId,
+      userId: userId
+    });
+
+    if (!paymentMethod) {
+      return res.status(404).json({ message: 'Payment method not found' });
+    }
+
+    // Update fields
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== undefined) {
+        paymentMethod[key] = updates[key];
+      }
+    });
+
+    await paymentMethod.save();
+
+    res.json({
+      message: 'Payment method updated successfully',
+      paymentMethod
+    });
+  } catch (error) {
+    console.error('Error updating payment method:', error);
+    res.status(500).json({
+      message: 'Failed to update payment method',
+      error: error.message
+    });
+  }
+};
+
+// Delete payment method
+const deletePaymentMethod = async (req, res) => {
+  try {
+    const { methodId } = req.params;
+    const userId = req.user.id;
+
+    const paymentMethod = await PaymentMethod.findOne({
+      _id: methodId,
+      userId: userId
+    });
+
+    if (!paymentMethod) {
+      return res.status(404).json({ message: 'Payment method not found' });
+    }
+
+    // Don't allow deletion of primary payment method if there are others
+    if (paymentMethod.isPrimary) {
+      const otherMethods = await PaymentMethod.countDocuments({
+        userId: userId,
+        _id: { $ne: methodId },
+        status: 'active'
+      });
+
+      if (otherMethods > 0) {
+        return res.status(400).json({
+          message: 'Cannot delete primary payment method. Set another method as primary first.'
+        });
+      }
+    }
+
+    await PaymentMethod.findByIdAndDelete(methodId);
+
+    res.json({ message: 'Payment method deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting payment method:', error);
+    res.status(500).json({
+      message: 'Failed to delete payment method',
+      error: error.message
+    });
+  }
+};
+
+// Set primary payment method
+const setPrimaryPaymentMethod = async (req, res) => {
+  try {
+    const { methodId } = req.params;
+    const userId = req.user.id;
+
+    // First, unset all primary flags for this user
+    await PaymentMethod.updateMany(
+      { userId: userId },
+      { isPrimary: false }
+    );
+
+    // Then set the specified method as primary
+    const paymentMethod = await PaymentMethod.findOneAndUpdate(
+      { _id: methodId, userId: userId },
+      { isPrimary: true },
+      { new: true }
+    );
+
+    if (!paymentMethod) {
+      return res.status(404).json({ message: 'Payment method not found' });
+    }
+
+    res.json({
+      message: 'Primary payment method updated successfully',
+      paymentMethod
+    });
+  } catch (error) {
+    console.error('Error setting primary payment method:', error);
+    res.status(500).json({
+      message: 'Failed to set primary payment method',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createPaymentIntent,
   confirmPayment,
@@ -699,5 +873,10 @@ module.exports = {
   createDispute,
   autoReleasePayments,
   getPlatformStats,
-  getPaymentNotifications
+  getPaymentNotifications,
+  getPaymentMethods,
+  addPaymentMethod,
+  updatePaymentMethod,
+  deletePaymentMethod,
+  setPrimaryPaymentMethod
 };
