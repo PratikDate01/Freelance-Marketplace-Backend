@@ -218,9 +218,9 @@ const getOrderById = async (req, res) => {
 
     const order = await Order.findById(id)
       .populate("gigId", "title image price category description")
-      .populate("buyerId", "name email avatar")
-      .populate("sellerId", "name email avatar")
-      .populate("messages.sender", "name");
+      .populate("buyerId", "name email avatar profilePicture")
+      .populate("sellerId", "name email avatar profilePicture")
+      .populate("messages.sender", "name avatar profilePicture");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -231,7 +231,36 @@ const getOrderById = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    res.json(order);
+    // Ensure all required fields are present and formatted correctly
+    const orderResponse = {
+      _id: order._id,
+      // Direct fields from order document
+      gigTitle: order.gigTitle,
+      gigImage: order.gigImage,
+      packageType: order.packageType,
+      amount: order.amount,
+      serviceFee: order.serviceFee,
+      totalAmount: order.totalAmount,
+      deliveryTime: order.deliveryTime,
+      deliveryDate: order.deliveryDate,
+      requirements: order.requirements,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      revisionCount: order.revisionCount || 0,
+      maxRevisions: order.maxRevisions || 1,
+      createdAt: order.createdAt,
+      // Populated fields
+      gigId: order.gigId,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      messages: order.messages,
+      statusHistory: order.statusHistory,
+      deliveryNote: order.deliveryNote,
+      deliveryFiles: order.deliveryFiles
+    };
+
+    console.log("Order response:", orderResponse); // Debug log
+    res.json(orderResponse);
 
   } catch (error) {
     console.error("Error fetching order:", error);
