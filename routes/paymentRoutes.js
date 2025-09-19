@@ -12,7 +12,12 @@ const {
   processWithdrawal,
   createDispute,
   getPlatformStats,
-  getPaymentNotifications
+  getPaymentNotifications,
+  getPaymentMethods,
+  addPaymentMethod,
+  updatePaymentMethod,
+  deletePaymentMethod,
+  setPrimaryPaymentMethod
 } = require('../controllers/paymentController');
 
 // Create payment intent for order
@@ -38,5 +43,20 @@ router.get('/history', verifyToken, getPaymentHistory);
 
 // Get payment notifications
 router.get('/notifications', verifyToken, getPaymentNotifications);
+
+// Get payment methods
+router.get('/methods', verifyToken, getPaymentMethods);
+
+// Add payment method
+router.post('/methods', verifyToken, addPaymentMethod);
+
+// Update payment method
+router.put('/methods/:methodId', verifyToken, updatePaymentMethod);
+
+// Delete payment method
+router.delete('/methods/:methodId', verifyToken, deletePaymentMethod);
+
+// Set primary payment method
+router.post('/methods/:methodId/primary', verifyToken, setPrimaryPaymentMethod);
 
 module.exports = router;
